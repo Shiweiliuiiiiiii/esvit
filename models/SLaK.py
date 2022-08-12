@@ -6,9 +6,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import sys
-
 # Add WHERE_YOU_CLONED_CUTLASS/examples/19_large_depthwise_conv2d_torch_extension into your PYTHONPATH by the following commands:
-sys.path.append('WHERE_YOU_CLONED_CUTLASS/examples/19_large_depthwise_conv2d_torch_extension')
+sys.path.append('/home/shiweil/Projects/cutlass/examples/19_large_depthwise_conv2d_torch_extension')
 
 import torch
 import torch.nn as nn
@@ -19,10 +18,8 @@ from depthwise_conv2d_implicit_gemm import DepthWiseConv2dImplicitGEMM
 
 use_sync_bn = True
 
-
 def get_conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias):
     return DepthWiseConv2dImplicitGEMM(in_channels, kernel_size, bias=bias)
-
 
 def get_bn(channels):
     if use_sync_bn:
@@ -30,26 +27,22 @@ def get_bn(channels):
     else:
         return nn.BatchNorm2d(channels)
 
-
 def conv_bn_relu(in_channels, out_channels, kernel_size, stride, padding, groups, dilation=1):
     if padding is None:
         padding = kernel_size // 2
     result = conv_bn(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                     stride=stride, padding=padding, groups=groups, dilation=dilation)
+                                         stride=stride, padding=padding, groups=groups, dilation=dilation)
     result.add_module('nonlinear', nn.ReLU())
     return result
 
-
-def conv_bn(in_channels, out_channels, kernel_size, stride, padding, groups, dilation=1, bn=True):
+def conv_bn(in_channels, out_channels, kernel_size, stride, padding, groups, dilation=1):
     if padding is None:
         padding = kernel_size // 2
     result = nn.Sequential()
     result.add_module('conv', get_conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
                                          stride=stride, padding=padding, dilation=dilation, groups=groups, bias=False))
-    if bn:
-        result.add_module('bn', get_bn(out_channels))
+    result.add_module('bn', get_bn(out_channels))
     return result
-
 
 def fuse_bn(conv, bn):
     kernel = conv.weight
@@ -62,13 +55,12 @@ def fuse_bn(conv, bn):
     t = (gamma / std).reshape(-1, 1, 1, 1)
     return kernel * t, beta - running_mean * gamma / std
 
-
 class ReparamLargeKernelConv(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_size,
                  stride, groups,
                  small_kernel,
-                 small_kernel_merged=False, LoRA=False, bn=True):
+                 small_kernel_merged=False, LoRA=False):
         super(ReparamLargeKernelConv, self).__init__()
         self.kernel_size = kernel_size
         self.small_kernel = small_kernel
@@ -80,19 +72,17 @@ class ReparamLargeKernelConv(nn.Module):
                                           stride=stride, padding=padding, dilation=1, groups=groups, bias=True)
         else:
             if self.LoRA:
-                self.LoRA1 = conv_bn(in_channels=in_channels, out_channels=out_channels,
-                                     kernel_size=(kernel_size, small_kernel),
-                                     stride=stride, padding=padding, dilation=1, groups=groups, bn=bn)
-                self.LoRA2 = conv_bn(in_channels=in_channels, out_channels=out_channels,
-                                     kernel_size=(small_kernel, kernel_size),
-                                     stride=stride, padding=padding, dilation=1, groups=groups, bn=bn)
+                self.LoRA1 = conv_bn(in_channels=in_channels, out_channels=out_channels, kernel_size=(kernel_size, small_kernel),
+                                      stride=stride, padding=padding, dilation=1, groups=groups)
+                self.LoRA2 = conv_bn(in_channels=in_channels, out_channels=out_channels, kernel_size=(small_kernel, kernel_size),
+                                     stride=stride, padding=padding, dilation=1, groups=groups)
             else:
                 self.lkb_origin = conv_bn(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-                                          stride=stride, padding=padding, dilation=1, groups=groups, bn=bn)
+                                      stride=stride, padding=padding, dilation=1, groups=groups)
             if (small_kernel is not None) and small_kernel < kernel_size:
                 # assert small_kernel <= kernel_size, 'The kernel size for re-param cannot be larger than the large kernel!'
                 self.small_conv = conv_bn(in_channels=in_channels, out_channels=out_channels, kernel_size=small_kernel,
-                                          stride=stride, padding=small_kernel // 2, groups=groups, dilation=1, bn=bn)
+                                             stride=stride, padding=small_kernel//2, groups=groups, dilation=1)
 
     def forward(self, inputs):
         if hasattr(self, 'lkb_reparam'):
@@ -119,10 +109,10 @@ class ReparamLargeKernelConv(nn.Module):
     def merge_kernel(self):
         eq_k, eq_b = self.get_equivalent_kernel_bias()
         self.lkb_reparam = get_conv2d(in_channels=self.lkb_origin.conv.in_channels,
-                                      out_channels=self.lkb_origin.conv.out_channels,
-                                      kernel_size=self.lkb_origin.conv.kernel_size, stride=self.lkb_origin.conv.stride,
-                                      padding=self.lkb_origin.conv.padding, dilation=self.lkb_origin.conv.dilation,
-                                      groups=self.lkb_origin.conv.groups, bias=True)
+                                     out_channels=self.lkb_origin.conv.out_channels,
+                                     kernel_size=self.lkb_origin.conv.kernel_size, stride=self.lkb_origin.conv.stride,
+                                     padding=self.lkb_origin.conv.padding, dilation=self.lkb_origin.conv.dilation,
+                                     groups=self.lkb_origin.conv.groups, bias=True)
         self.lkb_reparam.weight.data = eq_k
         self.lkb_reparam.bias.data = eq_b
         self.__delattr__('lkb_origin')
@@ -130,48 +120,48 @@ class ReparamLargeKernelConv(nn.Module):
             self.__delattr__('small_conv')
 
 
+
 class Block(nn.Module):
     r""" ConvNeXt Block. There are two equivalent implementations:
     (1) DwConv -> LayerNorm (channels_first) -> 1x1 Conv -> GELU -> 1x1 Conv; all in (N, C, H, W)
     (2) DwConv -> Permute to (N, H, W, C); LayerNorm (channels_last) -> Linear -> GELU -> Linear; Permute back
     We use (2) as we find it slightly faster in PyTorch
-
+    
     Args:
         dim (int): Number of input channels.
         drop_path (float): Stochastic depth rate. Default: 0.0
         layer_scale_init_value (float): Init value for Layer Scale. Default: 1e-6.
     """
-
-    def __init__(self, dim, drop_path=0., layer_scale_init_value=1e-6, kernel_size=(7, 7), LoRA=False, bn=True):
+    def __init__(self, dim, drop_path=0., layer_scale_init_value=1e-6, kernel_size=(7,7), LoRA=None):
         super().__init__()
+
         self.large_kernel = ReparamLargeKernelConv(in_channels=dim, out_channels=dim,
                                                    kernel_size=kernel_size[0],
                                                    stride=1, groups=dim, small_kernel=kernel_size[1],
-                                                   small_kernel_merged=False, LoRA=LoRA, bn=bn)
+                                                   small_kernel_merged=False, LoRA=LoRA)
 
         self.norm = LayerNorm(dim, eps=1e-6)
-        self.pwconv1 = nn.Linear(dim, 4 * dim)  # pointwise/1x1 convs, implemented with linear layers
+        self.pwconv1 = nn.Linear(dim, 4 * dim) # pointwise/1x1 convs, implemented with linear layers
         self.act = nn.GELU()
         self.pwconv2 = nn.Linear(4 * dim, dim)
-        self.gamma = nn.Parameter(layer_scale_init_value * torch.ones((dim)),
-                                  requires_grad=True) if layer_scale_init_value > 0 else None
+        self.gamma = nn.Parameter(layer_scale_init_value * torch.ones((dim)), 
+                                    requires_grad=True) if layer_scale_init_value > 0 else None
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
     def forward(self, x):
         input = x
         x = self.large_kernel(x)
-        x = x.permute(0, 2, 3, 1)  # (N, C, H, W) -> (N, H, W, C)
+        x = x.permute(0, 2, 3, 1) # (N, C, H, W) -> (N, H, W, C)
         x = self.norm(x)
         x = self.pwconv1(x)
         x = self.act(x)
         x = self.pwconv2(x)
         if self.gamma is not None:
             x = self.gamma * x
-        x = x.permute(0, 3, 1, 2)  # (N, H, W, C) -> (N, C, H, W)
+        x = x.permute(0, 3, 1, 2) # (N, H, W, C) -> (N, C, H, W)
 
         x = input + self.drop_path(x)
         return x
-
 
 class SLaK(nn.Module):
     r""" SLaK
@@ -186,16 +176,14 @@ class SLaK(nn.Module):
         layer_scale_init_value (float): Init value for Layer Scale. Default: 1e-6.
         head_init_scale (float): Init scaling value for classifier weights and biases. Default: 1.
     """
-
-    def __init__(self, in_chans=3, num_classes=1000,
-                 depths=[3, 3, 9, 3], dims=[96, 192, 384, 768], drop_path_rate=0.,
-                 layer_scale_init_value=1e-6, head_init_scale=1., kernel_size=[31, 29, 27, 13, 3],
-                 width_factor=1, LoRA=None, bn=True, use_dense_prediction=False,
+    def __init__(self, in_chans=3, num_classes=1000, 
+                 depths=[3, 3, 9, 3], dims=[96, 192, 384, 768], drop_path_rate=0., 
+                 layer_scale_init_value=1e-6, head_init_scale=1., kernel_size=[31, 29, 27, 13, 3], width_factor=1, LoRA=None
                  ):
         super().__init__()
-        dims = [int(x * width_factor) for x in dims]
+        dims = [int(x*width_factor) for x in dims]
         self.kernel_size = kernel_size
-        self.downsample_layers = nn.ModuleList()  # stem and 3 intermediate downsampling conv layers
+        self.downsample_layers = nn.ModuleList() # stem and 3 intermediate downsampling conv layers
         stem = nn.Sequential(
             nn.Conv2d(in_chans, dims[0], kernel_size=4, stride=4),
             LayerNorm(dims[0], eps=1e-6, data_format="channels_first")
@@ -203,33 +191,28 @@ class SLaK(nn.Module):
         self.downsample_layers.append(stem)
         for i in range(3):
             downsample_layer = nn.Sequential(
-                LayerNorm(dims[i], eps=1e-6, data_format="channels_first"),
-                nn.Conv2d(dims[i], dims[i + 1], kernel_size=2, stride=2),
+                    LayerNorm(dims[i], eps=1e-6, data_format="channels_first"),
+                    nn.Conv2d(dims[i], dims[i+1], kernel_size=2, stride=2),
             )
             self.downsample_layers.append(downsample_layer)
 
-        self.stages = nn.ModuleList()  # 4 feature resolution stages, each consisting of multiple residual blocks
-        dp_rates = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]
+        self.stages = nn.ModuleList() # 4 feature resolution stages, each consisting of multiple residual blocks
+        dp_rates=[x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))] 
         cur = 0
         for i in range(4):
             stage = nn.Sequential(
-                *[Block(dim=dims[i], drop_path=dp_rates[cur + j],
-                        layer_scale_init_value=layer_scale_init_value,
-                        kernel_size=(self.kernel_size[i], self.kernel_size[-1]), LoRA=LoRA, bn=bn) for j in
-                  range(depths[i])]
+                *[Block(dim=dims[i], drop_path=dp_rates[cur + j], 
+                layer_scale_init_value=layer_scale_init_value, kernel_size=(self.kernel_size[i], self.kernel_size[-1]), LoRA=LoRA) for j in range(depths[i])]
             )
             self.stages.append(stage)
             cur += depths[i]
 
-        self.norm = nn.LayerNorm(dims[-1], eps=1e-6)  # final norm layer
+        self.norm = nn.LayerNorm(dims[-1], eps=1e-6) # final norm layer
         self.head = nn.Linear(dims[-1], num_classes)
 
         self.apply(self._init_weights)
         self.head.weight.data.mul_(head_init_scale)
         self.head.bias.data.mul_(head_init_scale)
-
-        self.use_dense_prediction = use_dense_prediction
-        if self.use_dense_prediction: self.head_dense = None
 
     def _init_weights(self, m):
         if isinstance(m, (nn.Conv2d, nn.Linear)):
@@ -242,74 +225,19 @@ class SLaK(nn.Module):
         for i in range(4):
             x = self.downsample_layers[i](x)
             x = self.stages[i](x)
-
-        x = self.norm(x.mean([-2, -1]))  # global average pooling, (N, C, H, W) -> (N, C)
-
-        if self.use_dense_prediction:
-            return x, x_region
-        else:
-            return x
+        return self.norm(x.mean([-2, -1])) # global average pooling, (N, C, H, W) -> (N, C)
 
     def forward(self, x):
-        # convert to list
-        if not isinstance(x, list):
-            x = [x]
-        # Perform forward pass separately on each resolution input.
-        # The inputs corresponding to a single resolution are clubbed and single
-        # forward is run on the same resolution inputs. Hence we do several
-        # forward passes = number of different resolutions used. We then
-        # concatenate all the output features.
-
-        # When region level prediction task is used, the network output four variables:
-        # self.head(output_cls):       view-level prob vector
-        # self.head_dense(output_fea): regioin-level prob vector
-        # output_fea:                  region-level feature map (grid features)
-        # npatch:                      number of patches per view
-
-        idx_crops = torch.cumsum(torch.unique_consecutive(
-            torch.tensor([inp.shape[-1] for inp in x]),
-            return_counts=True,
-        )[1], 0)
-
-        if self.use_dense_prediction:
-            start_idx = 0
-
-            for end_idx in idx_crops:
-                _out_cls, _out_fea = self.forward_features(torch.cat(x[start_idx: end_idx]))
-                B, N, C = _out_fea.shape
-
-                if start_idx == 0:
-                    output_cls = _out_cls
-                    output_fea = _out_fea.reshape(B * N, C)
-                    npatch = [N]
-                else:
-                    output_cls = torch.cat((output_cls, _out_cls))
-                    output_fea = torch.cat((output_fea, _out_fea.reshape(B * N, C)))
-                    npatch.append(N)
-                start_idx = end_idx
-
-            return self.head(output_cls), self.head_dense(output_fea), output_fea, npatch
-
-        else:
-            start_idx = 0
-            for end_idx in idx_crops:
-                _out = self.forward_features(torch.cat(x[start_idx: end_idx]))
-                if start_idx == 0:
-                    output = _out
-                else:
-                    output = torch.cat((output, _out))
-                start_idx = end_idx
-            # Run the head forward on the concatenated features.
-            return self.head(output)
-
+        x = self.forward_features(x)
+        x = self.head(x)
+        return x
 
 class LayerNorm(nn.Module):
-    r""" LayerNorm that supports two data formats: channels_last (default) or channels_first.
-    The ordering of the dimensions in the inputs. channels_last corresponds to inputs with
-    shape (batch_size, height, width, channels) while channels_first corresponds to inputs
+    r""" LayerNorm that supports two data formats: channels_last (default) or channels_first. 
+    The ordering of the dimensions in the inputs. channels_last corresponds to inputs with 
+    shape (batch_size, height, width, channels) while channels_first corresponds to inputs 
     with shape (batch_size, channels, height, width).
     """
-
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
         super().__init__()
         self.weight = nn.Parameter(torch.ones(normalized_shape))
@@ -317,9 +245,9 @@ class LayerNorm(nn.Module):
         self.eps = eps
         self.data_format = data_format
         if self.data_format not in ["channels_last", "channels_first"]:
-            raise NotImplementedError
-        self.normalized_shape = (normalized_shape,)
-
+            raise NotImplementedError 
+        self.normalized_shape = (normalized_shape, )
+    
     def forward(self, x):
         if self.data_format == "channels_last":
             return F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
@@ -341,7 +269,6 @@ model_urls = {
     "convnext_xlarge_22k": "https://dl.fbaipublicfiles.com/convnext/convnext_xlarge_22k_224.pth",
 }
 
-
 @register_model
 def SLaK_tiny(pretrained=False, **kwargs):
     model = SLaK(depths=[3, 3, 9, 3], dims=[96, 192, 384, 768], **kwargs)
@@ -350,7 +277,6 @@ def SLaK_tiny(pretrained=False, **kwargs):
         checkpoint = torch.hub.load_state_dict_from_url(url=url, map_location="cpu", check_hash=True)
         model.load_state_dict(checkpoint["model"])
     return model
-
 
 @register_model
 def SLaK_small(pretrained=False, **kwargs):
@@ -361,7 +287,6 @@ def SLaK_small(pretrained=False, **kwargs):
         model.load_state_dict(checkpoint["model"])
     return model
 
-
 @register_model
 def SLaK_base(pretrained=False, in_22k=False, **kwargs):
     model = SLaK(depths=[3, 3, 27, 3], dims=[128, 256, 512, 1024], **kwargs)
@@ -371,7 +296,6 @@ def SLaK_base(pretrained=False, in_22k=False, **kwargs):
         model.load_state_dict(checkpoint["model"])
     return model
 
-
 @register_model
 def SLaK_large(pretrained=False, in_22k=False, **kwargs):
     model = SLaK(depths=[3, 3, 27, 3], dims=[192, 384, 768, 1536], **kwargs)
@@ -380,7 +304,6 @@ def SLaK_large(pretrained=False, in_22k=False, **kwargs):
         checkpoint = torch.hub.load_state_dict_from_url(url=url, map_location="cpu")
         model.load_state_dict(checkpoint["model"])
     return model
-
 
 @register_model
 def SLaK_xlarge(pretrained=False, in_22k=False, **kwargs):
