@@ -79,7 +79,7 @@ def get_args_parser():
 
     # Model parameters
     parser.add_argument('--arch', default='deit_small', type=str,
-        choices=['slak_tiny','cvt_tiny', 'cvt_small', 'swin_tiny','swin_small', 'swin_base', 'swin_large', 'swin', 'vil', 'vil_1281', 'vil_2262', 'vil_14121', 'deit_tiny', 'deit_small', 'vit_base'] + torchvision_archs,
+        choices=['SLaK_tiny','cvt_tiny', 'cvt_small', 'swin_tiny','swin_small', 'swin_base', 'swin_large', 'swin', 'vil', 'vil_1281', 'vil_2262', 'vil_14121', 'deit_tiny', 'deit_small', 'vit_base'] + torchvision_archs,
         help="""Name of architecture to train. For quick experiments with ViTs,
         we recommend using deit_tiny or deit_small.""")
     parser.add_argument('--patch_size', default=16, type=int, help="""Size in pixels
