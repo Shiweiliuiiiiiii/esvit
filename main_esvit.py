@@ -291,12 +291,12 @@ def train_esvit(args):
             args.out_dim,
             use_bn=args.use_bn_in_head,
             norm_last_layer=args.norm_last_layer,
-        ), head_dense=head_dense_student, use_dense_prediction=use_dense_prediction, SLaK=True)
+        ), head_dense=head_dense_student, use_dense_prediction=use_dense_prediction)
         teacher = utils.MultiCropWrapper(
             teacher,
             DINOHead(embed_dim, args.out_dim, args.use_bn_in_head),
             head_dense=head_dense_teacher,
-            use_dense_prediction=use_dense_prediction, SLaK=True
+            use_dense_prediction=use_dense_prediction
         )
 
     # if the network is a 4-stage vision transformer (i.e. swin)
