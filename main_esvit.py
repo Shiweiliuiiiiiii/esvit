@@ -48,10 +48,27 @@ from config import update_config
 from config import save_config
 
 from datasets import build_dataloader
+from timm.models import create_model
+import models.SLaK
 
 torchvision_archs = sorted(name for name in torchvision_models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(torchvision_models.__dict__[name]))
+
+def str2bool(v):
+    """
+    Converts string to bool type; enables command line
+    arguments in the format of '--arg1 true --arg2 false'
+    """
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 def get_args_parser():
     parser = argparse.ArgumentParser('EsViT', add_help=False)
@@ -203,7 +220,17 @@ def get_args_parser():
     parser.add_argument('opts',
                         help="Modify config options using the command-line",
                         default=None,
-                        nargs=argparse.REMAINDER)    
+                        nargs=argparse.REMAINDER)
+
+    # SLaK
+    parser.add_argument('--drop_path_rate', type=float, default=0.1, help="stochastic depth rate")
+    parser.add_argument('--nb_classes', default=1000, type=int, help='number of the classification types')
+    parser.add_argument('--layer_scale_init_value', default=1e-6, type=float, help="Layer scale initial values")
+    parser.add_argument('--head_init_scale', default=1.0, type=float, help='classifier head initial scale, typically adjusted in fine-tuning')
+    parser.add_argument('--kernel_size', nargs="*", type=int, default = [7,7,7,7,5], help='kernel size (default: [31,29,27,13,5], the last number is N)')
+    parser.add_argument('--width_factor', type=float, default=1, help='set the width factor of the model')
+    parser.add_argument('--LoRA', type=str2bool, default=False, help='Enabling low rank path')
+    parser.add_argument('--bn', type=str2bool, default=False, help='adding bn after large kernels')
     return parser
 
 
@@ -230,6 +257,39 @@ def train_esvit(args):
             label_smoothing=args.smoothing, num_classes=args.batch_size_per_gpu)
 
     # ============ building student and teacher networks ... ============
+
+        # if the network is a 4-stage convnet (ie, convnext, slak)
+        if 'SLaK' in args.arch:
+            student = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
+                                   drop_path_rate=args.drop_path_rate,
+                                   layer_scale_init_value=args.layer_scale_init_value,
+                                   head_init_scale=args.head_init_scale, kernel_size=args.kernel_size,
+                                   width_factor=args.width_factor,
+                                   LoRA=args.LoRA, bn=args.bn)
+            teacher = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
+                                   drop_path_rate=args.drop_path_rate,
+                                   layer_scale_init_value=args.layer_scale_init_value,
+                                   head_init_scale=args.head_init_scale, kernel_size=args.kernel_size,
+                                   width_factor=args.width_factor,
+                                   LoRA=args.LoRA, bn=args.bn)
+            embed_dim = student.head.weight.shape[1]
+
+            student.head = DINOHead(
+                embed_dim,
+                args.out_dim,
+                use_bn=args.use_bn_in_head,
+                norm_last_layer=args.norm_last_layer,
+            )
+            teacher.head = DINOHead(embed_dim, args.out_dim, args.use_bn_in_head)
+
+            if args.use_dense_prediction:
+                student.head_dense = DINOHead(
+                    embed_dim,
+                    args.out_dim,
+                    use_bn=args.use_bn_in_head,
+                    norm_last_layer=args.norm_last_layer,
+                )
+                teacher.head_dense = DINOHead(embed_dim, args.out_dim, args.use_bn_in_head)
 
     # if the network is a 4-stage vision transformer (i.e. swin)
     if 'swin' in args.arch :
@@ -299,7 +359,6 @@ def train_esvit(args):
                 norm_last_layer=args.norm_last_layer,
             )
             teacher.head_dense = DINOHead(fea_dim, args.out_dim, args.use_bn_in_head)
-
 
     # if the network is a vision transformer (i.e. deit_tiny, deit_small, vit_base)
     elif args.arch in vits.__dict__.keys():
