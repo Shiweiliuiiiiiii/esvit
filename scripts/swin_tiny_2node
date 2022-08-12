@@ -2,7 +2,7 @@
 #SBATCH --job-name=esvit_swin_tiny_7x7_bn_2node
 #SBATCH -p gpu
 #SBATCH -N 2
-#SBATCH --ntasks-per-node=4
+#SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH -t 3-11:59:59
 #SBATCH --exclusive
