@@ -685,9 +685,11 @@ class SwinTransformer(nn.Module):
             x = layer(x)
 
         x_region = self.norm(x)  # B L C
+        print('1', x.size())
         x = self.avgpool(x_region.transpose(1, 2))  # B C 1
+        print('2',x.size())
         x = torch.flatten(x, 1)
-
+        print('3',x.size())
         if self.use_dense_prediction:
             return x, x_region
         else:

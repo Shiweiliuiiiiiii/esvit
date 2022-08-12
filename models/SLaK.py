@@ -242,12 +242,65 @@ class SLaK(nn.Module):
         for i in range(4):
             x = self.downsample_layers[i](x)
             x = self.stages[i](x)
-        return self.norm(x.mean([-2, -1]))  # global average pooling, (N, C, H, W) -> (N, C)
+
+        x = self.norm(x.mean([-2, -1]))  # global average pooling, (N, C, H, W) -> (N, C)
+
+        if self.use_dense_prediction:
+            return x, x_region
+        else:
+            return x
 
     def forward(self, x):
-        x = self.forward_features(x)
-        x = self.head(x)
-        return x
+        # convert to list
+        if not isinstance(x, list):
+            x = [x]
+        # Perform forward pass separately on each resolution input.
+        # The inputs corresponding to a single resolution are clubbed and single
+        # forward is run on the same resolution inputs. Hence we do several
+        # forward passes = number of different resolutions used. We then
+        # concatenate all the output features.
+
+        # When region level prediction task is used, the network output four variables:
+        # self.head(output_cls):       view-level prob vector
+        # self.head_dense(output_fea): regioin-level prob vector
+        # output_fea:                  region-level feature map (grid features)
+        # npatch:                      number of patches per view
+
+        idx_crops = torch.cumsum(torch.unique_consecutive(
+            torch.tensor([inp.shape[-1] for inp in x]),
+            return_counts=True,
+        )[1], 0)
+
+        if self.use_dense_prediction:
+            start_idx = 0
+
+            for end_idx in idx_crops:
+                _out_cls, _out_fea = self.forward_features(torch.cat(x[start_idx: end_idx]))
+                B, N, C = _out_fea.shape
+
+                if start_idx == 0:
+                    output_cls = _out_cls
+                    output_fea = _out_fea.reshape(B * N, C)
+                    npatch = [N]
+                else:
+                    output_cls = torch.cat((output_cls, _out_cls))
+                    output_fea = torch.cat((output_fea, _out_fea.reshape(B * N, C)))
+                    npatch.append(N)
+                start_idx = end_idx
+
+            return self.head(output_cls), self.head_dense(output_fea), output_fea, npatch
+
+        else:
+            start_idx = 0
+            for end_idx in idx_crops:
+                _out = self.forward_features(torch.cat(x[start_idx: end_idx]))
+                if start_idx == 0:
+                    output = _out
+                else:
+                    output = torch.cat((output, _out))
+                start_idx = end_idx
+            # Run the head forward on the concatenated features.
+            return self.head(output)
 
 
 class LayerNorm(nn.Module):

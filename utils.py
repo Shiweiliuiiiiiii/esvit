@@ -642,8 +642,6 @@ class ResNetWrapper(nn.Module):
 
     def forward_features(self, x):
 
-        
-
         x_region = self.forward_feature_map(x)
         H, W = x_region.shape[-2], x_region.shape[-1]
 
@@ -665,6 +663,43 @@ class ResNetWrapper(nn.Module):
         return x
 
 
+class SLaKWrapper(nn.Module):
+
+    def __init__(self, backbone):
+        super(SLaKWrapper, self).__init__()
+        backbone.fc = nn.Identity()
+        self.backbone = backbone
+
+    def forward_feature_map(self, x):
+        x = self.backbone.conv1(x)
+        x = self.backbone.bn1(x)
+        x = self.backbone.relu(x)
+        x = self.backbone.maxpool(x)
+
+        x = self.backbone.layer1(x)
+        x = self.backbone.layer2(x)
+        x = self.backbone.layer3(x)
+        x = self.backbone.layer4(x)
+
+        return x
+
+    def forward_features(self, x):
+        x_region = self.forward_feature_map(x)
+        H, W = x_region.shape[-2], x_region.shape[-1]
+
+        x = self.backbone.avgpool(x_region)
+        x = torch.flatten(x, 1)
+        x = self.backbone.fc(x)
+
+        return x, rearrange(x_region, 'b c h w -> b (h w) c', h=H, w=W)
+
+    def forward(self, x):
+        x = self.forward_feature_map(x)
+        x = self.backbone.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.backbone.fc(x)
+
+        return x
 
 
 
