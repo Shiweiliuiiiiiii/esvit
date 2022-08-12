@@ -258,38 +258,38 @@ def train_esvit(args):
 
     # ============ building student and teacher networks ... ============
 
-        # if the network is a 4-stage convnet (ie, convnext, slak)
-        if 'slak' in args.arch:
-            student = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
-                                   drop_path_rate=args.drop_path_rate,
-                                   layer_scale_init_value=args.layer_scale_init_value,
-                                   head_init_scale=args.head_init_scale, kernel_size=args.kernel_size,
-                                   width_factor=args.width_factor,
-                                   LoRA=args.LoRA, bn=args.bn)
-            teacher = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
-                                   drop_path_rate=args.drop_path_rate,
-                                   layer_scale_init_value=args.layer_scale_init_value,
-                                   head_init_scale=args.head_init_scale, kernel_size=args.kernel_size,
-                                   width_factor=args.width_factor,
-                                   LoRA=args.LoRA, bn=args.bn)
-            embed_dim = student.head.weight.shape[1]
+    # if the network is a 4-stage convnet (ie, convnext, slak)
+    if 'slak' in args.arch:
+        student = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
+                               drop_path_rate=args.drop_path_rate,
+                               layer_scale_init_value=args.layer_scale_init_value,
+                               head_init_scale=args.head_init_scale, kernel_size=args.kernel_size,
+                               width_factor=args.width_factor,
+                               LoRA=args.LoRA, bn=args.bn)
+        teacher = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
+                               drop_path_rate=args.drop_path_rate,
+                               layer_scale_init_value=args.layer_scale_init_value,
+                               head_init_scale=args.head_init_scale, kernel_size=args.kernel_size,
+                               width_factor=args.width_factor,
+                               LoRA=args.LoRA, bn=args.bn)
+        embed_dim = student.head.weight.shape[1]
 
-            student.head = DINOHead(
+        student.head = DINOHead(
+            embed_dim,
+            args.out_dim,
+            use_bn=args.use_bn_in_head,
+            norm_last_layer=args.norm_last_layer,
+        )
+        teacher.head = DINOHead(embed_dim, args.out_dim, args.use_bn_in_head)
+
+        if args.use_dense_prediction:
+            student.head_dense = DINOHead(
                 embed_dim,
                 args.out_dim,
                 use_bn=args.use_bn_in_head,
                 norm_last_layer=args.norm_last_layer,
             )
-            teacher.head = DINOHead(embed_dim, args.out_dim, args.use_bn_in_head)
-
-            if args.use_dense_prediction:
-                student.head_dense = DINOHead(
-                    embed_dim,
-                    args.out_dim,
-                    use_bn=args.use_bn_in_head,
-                    norm_last_layer=args.norm_last_layer,
-                )
-                teacher.head_dense = DINOHead(embed_dim, args.out_dim, args.use_bn_in_head)
+            teacher.head_dense = DINOHead(embed_dim, args.out_dim, args.use_bn_in_head)
 
     # if the network is a 4-stage vision transformer (i.e. swin)
     if 'swin' in args.arch :
