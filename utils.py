@@ -695,8 +695,9 @@ class SLaKWrapper(nn.Module):
 
     def forward(self, x):
         x = self.forward_feature_map(x)
+        x = x.mean([-2, -1])
         x = self.backbone.norm(x)
-        x = self.backbone.head(x)
+        x = self.backbone.fc(x)
 
         return x
 
