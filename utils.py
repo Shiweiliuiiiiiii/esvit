@@ -686,7 +686,7 @@ class SLaKWrapper(nn.Module):
         H, W = x_region.shape[-2], x_region.shape[-1]
 
         x = x.mean([-2, -1])  # average pooling (N, C, H, W) -> (N, C)
-        print(f'after average pooling is {x_region.size()}')
+        print(f'after average pooling is {x.size()}')
 
         x = self.backbone.norm(x)
         x = self.backbone.head(x)
