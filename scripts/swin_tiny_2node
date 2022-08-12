@@ -1,0 +1,27 @@
+#!/bin/bash
+#SBATCH --job-name=esvit_swin_tiny_7x7_bn_2node
+#SBATCH -p gpu
+#SBATCH -N 2
+#SBATCH --ntasks-per-node=4
+#SBATCH --gpus-per-node=4
+#SBATCH -t 3-11:59:59
+#SBATCH --exclusive
+#SBATCH --cpus-per-task=72
+#SBATCH -o esvit_swin_tiny_7x7_bn_2node.out
+
+source /home/sliu/miniconda3/etc/profile.d/conda.sh
+source activate LoRA
+
+DATA_PATH=/projects/2/managed_datasets/imagenet/
+PROJ_PATH=your_esvit_project_path
+OUT_PATH=~/project_space/esvit/output/esvit_exp/ssl/swin_tiny_imagenet/bl_lr0.0005_gpu8_bs64_multicrop_epoch300_dino_aug_window7
+
+
+python main_evsit_mnodes.py --num_nodes 2 --num_gpus_per_node 4 --data_path $DATA_PATH/train \
+--output_dir $OUT_PATH --batch_size_per_gpu 64 --arch swin_tiny \
+--zip_mode True --epochs 300 --teacher_temp 0.07 --warmup_epochs 10 --warmup_teacher_temp_epochs 30 \
+--norm_last_layer false --cfg experiments/imagenet/swin/swin_tiny_patch4_window7_224.yaml \
+--use_dense_prediction True
+
+
+ source deactivate
