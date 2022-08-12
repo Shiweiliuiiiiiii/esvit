@@ -259,7 +259,7 @@ def train_esvit(args):
     # ============ building student and teacher networks ... ============
 
         # if the network is a 4-stage convnet (ie, convnext, slak)
-        if 'SLaK' in args.arch:
+        if 'slak' in args.arch:
             student = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
                                    drop_path_rate=args.drop_path_rate,
                                    layer_scale_init_value=args.layer_scale_init_value,
