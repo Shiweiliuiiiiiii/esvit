@@ -190,7 +190,7 @@ class SLaK(nn.Module):
     def __init__(self, in_chans=3, num_classes=1000,
                  depths=[3, 3, 9, 3], dims=[96, 192, 384, 768], drop_path_rate=0.,
                  layer_scale_init_value=1e-6, head_init_scale=1., kernel_size=[31, 29, 27, 13, 3],
-                 width_factor=1, LoRA=None, bn=True
+                 width_factor=1, LoRA=None, bn=True, use_dense_prediction=False,
                  ):
         super().__init__()
         dims = [int(x * width_factor) for x in dims]
@@ -227,6 +227,9 @@ class SLaK(nn.Module):
         self.apply(self._init_weights)
         self.head.weight.data.mul_(head_init_scale)
         self.head.bias.data.mul_(head_init_scale)
+
+        self.use_dense_prediction = use_dense_prediction
+        if self.use_dense_prediction: self.head_dense = None
 
     def _init_weights(self, m):
         if isinstance(m, (nn.Conv2d, nn.Linear)):

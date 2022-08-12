@@ -274,22 +274,30 @@ def train_esvit(args):
                                LoRA=args.LoRA, bn=args.bn)
         embed_dim = student.head.weight.shape[1]
 
-        student.head = DINOHead(
-            embed_dim,
-            args.out_dim,
-            use_bn=args.use_bn_in_head,
-            norm_last_layer=args.norm_last_layer,
-        )
-        teacher.head = DINOHead(embed_dim, args.out_dim, args.use_bn_in_head)
-
-        if args.use_dense_prediction:
-            student.head_dense = DINOHead(
+        use_dense_prediction = args.use_dense_prediction
+        if use_dense_prediction:
+            head_dense_student = DINOHead(
                 embed_dim,
                 args.out_dim,
                 use_bn=args.use_bn_in_head,
                 norm_last_layer=args.norm_last_layer,
             )
-            teacher.head_dense = DINOHead(embed_dim, args.out_dim, args.use_bn_in_head)
+            head_dense_teacher = DINOHead(embed_dim, args.out_dim, args.use_bn_in_head)
+        else:
+            head_dense_student, head_dense_teacher = None, None
+
+        student = utils.MultiCropWrapper(student, DINOHead(
+            embed_dim,
+            args.out_dim,
+            use_bn=args.use_bn_in_head,
+            norm_last_layer=args.norm_last_layer,
+        ), head_dense=head_dense_student, use_dense_prediction=use_dense_prediction)
+        teacher = utils.MultiCropWrapper(
+            teacher,
+            DINOHead(embed_dim, args.out_dim, args.use_bn_in_head),
+            head_dense=head_dense_teacher,
+            use_dense_prediction=use_dense_prediction
+        )
 
     # if the network is a 4-stage vision transformer (i.e. swin)
     if 'swin' in args.arch :
