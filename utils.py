@@ -682,9 +682,11 @@ class SLaKWrapper(nn.Module):
 
     def forward_features(self, x):
         x_region = self.forward_feature_map(x) # (N, C, H, W)
+        print(f'after forward_feature_map is {x_region.size()}')
         H, W = x_region.shape[-2], x_region.shape[-1]
 
         x = x.mean([-2, -1])  # average pooling (N, C, H, W) -> (N, C)
+        print(f'after average pooling is {x_region.size()}')
 
         x = self.backbone.norm(x)
         x = self.backbone.head(x)
