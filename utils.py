@@ -567,11 +567,12 @@ class MultiCropWrapper(nn.Module):
     """
     def __init__(self, backbone, head, head_dense=None, use_dense_prediction=False, SLaK=False):
         super(MultiCropWrapper, self).__init__()
-        backbone.fc = nn.Identity()
+
         if SLaK:
             self.backbone = SLaKWrapper(backbone)
         else:
             self.backbone = ResNetWrapper(backbone)
+            backbone.fc = nn.Identity()
         self.head = head
 
         self.use_dense_prediction = use_dense_prediction
@@ -670,7 +671,6 @@ class SLaKWrapper(nn.Module):
 
     def __init__(self, backbone):
         super(SLaKWrapper, self).__init__()
-        backbone.fc = nn.Identity()
         self.backbone = backbone
 
     def forward_feature_map(self, x):
@@ -687,7 +687,6 @@ class SLaKWrapper(nn.Module):
         x = x_region.mean([-2, -1])  # average pooling (N, C, H, W) -> (N, C)
 
         x = self.backbone.norm(x)   # [32, 768]
-        x = self.backbone.fc(x)
 
         return x, rearrange(x_region, 'b c h w -> b (h w) c', h=H, w=W)
 
@@ -695,7 +694,6 @@ class SLaKWrapper(nn.Module):
         x = self.forward_feature_map(x)
         x = x.mean([-2, -1])
         x = self.backbone.norm(x)
-        x = self.backbone.fc(x)
 
         return x
 
