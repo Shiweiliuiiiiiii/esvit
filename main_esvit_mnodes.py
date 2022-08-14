@@ -13,6 +13,21 @@ parser.add_argument('--cfg',
                     help='experiment configure file name',
                     type=str)
 
+def str2bool(v):
+    """
+    Converts string to bool type; enables command line
+    arguments in the format of '--arg1 true --arg2 false'
+    """
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 # Model parameters
 parser.add_argument('--arch', default='deit_small', type=str,
     choices=['SLaK_tiny', 'swin_tiny','swin_small', 'swin_base', 'swin_large', 'swin', 'vil', 'vil_1281', 'vil_2262', 'vil_14121', 'deit_tiny', 'deit_small', 'vit_base'],
@@ -64,6 +79,19 @@ parser.add_argument("--samples_per_gpu", default=1, type=int,
 parser.add_argument("--node_rank", default=-1, type=int,
                     help="node rank, should be in [0, num_nodes)")
 
+# large kernel configuration
+
+parser.add_argument('--drop_path_rate', type=float, default=0.1, help="stochastic depth rate")
+parser.add_argument('--nb_classes', default=1000, type=int, help='number of the classification types')
+parser.add_argument('--layer_scale_init_value', default=1e-6, type=float, help="Layer scale initial values")
+parser.add_argument('--head_init_scale', default=1.0, type=float,
+                    help='classifier head initial scale, typically adjusted in fine-tuning')
+parser.add_argument('--kernel_size', nargs="*", type=int, default=[7, 7, 7, 7, 5],
+                    help='kernel size (default: [31,29,27,13,5], the last number is N)')
+parser.add_argument('--width_factor', type=float, default=1, help='set the width factor of the model')
+parser.add_argument('--LoRA', type=str2bool, default=False, help='Enabling low rank path')
+parser.add_argument('--bn', type=str2bool, default=False, help='adding bn after large kernels')
+
 # job meta info
 parser.add_argument("--job_name", default="", type=str,
                     help="job name")
@@ -110,6 +138,8 @@ if args.num_nodes > 1:
             --tsv_mode {tsv_mode} \
             --sampler {sampler} \
             --warmup_epochs {warmup_epochs} \
+            --kernel_size {kernel_size} \
+            --bn {bn} \
             --pretrained_weights_ckpt {pretrained_weights_ckpt} \
             --aug-opt {aug_opt}'\
             .format(
@@ -131,6 +161,8 @@ if args.num_nodes > 1:
                 tsv_mode=args.tsv_mode,    
                 sampler=args.sampler,
                 warmup_epochs=args.warmup_epochs,
+                kernel_size=args.kernel_size,
+                bn=args.bn,
                 pretrained_weights_ckpt=args.pretrained_weights_ckpt,
                 aug_opt=args.aug_opt
             )
