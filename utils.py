@@ -691,7 +691,7 @@ class SLaKWrapper(nn.Module):
         x = self.backbone.norm(x)   # [32, 768]
         x = self.backbone.head(x)
 
-        return x, rearrange(x_region, 'b c h w -> b (h w) c', h=H, w=W)
+        return x, self.backbone.norm(rearrange(x_region, 'b c h w -> b (h w) c', h=H, w=W))
 
     def forward(self, x):
         x = self.forward_feature_map(x)
