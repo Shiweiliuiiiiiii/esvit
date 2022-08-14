@@ -14,6 +14,15 @@ source /home/sliu/miniconda3/etc/profile.d/conda.sh
 source activate LoRA
 
 
+python main_evsit_mnodes.py --num_nodes 2 --num_gpus_per_node 4 --data_path /projects/2/managed_datasets/imagenet/train/ \
+--output_dir ~/project_space/esvit/output/esvit_exp/ssl/slak_tiny_imagenet_7x7/ \
+--batch_size_per_gpu 64 --arch SLaK_tiny --kernel_size 7 7 7 7 100 --bn True  \
+--zip_mode True --epochs 300 --teacher_temp 0.07 --warmup_epochs 10 --warmup_teacher_temp_epochs 30 \
+--norm_last_layer false --cfg experiments/imagenet/swin/swin_tiny_patch4_window7_224.yaml \
+--use_dense_prediction True
+
+
+
 python -m torch.distributed.launch --nproc_per_node=4 main_esvit.py \
 --arch SLaK_tiny --kernel_size 7 7 7 7 100 --bn True  \
 --data_path /projects/2/managed_datasets/imagenet/train/ \
