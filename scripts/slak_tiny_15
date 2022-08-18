@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=esvit_slak_15x15_bn
+#SBATCH --job-name=esvit_slak_15x15_bn_resume
 #SBATCH -p gpu
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
@@ -8,7 +8,7 @@
 #SBATCH -t 3-11:59:59
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=72
-#SBATCH -o esvit_slak_15x15_bn.out
+#SBATCH -o esvit_slak_15x15_bn_resume.out
 
 source /home/sliu/miniconda3/etc/profile.d/conda.sh
 source activate LoRA
