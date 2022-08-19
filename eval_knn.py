@@ -42,6 +42,7 @@ from config import config
 from config import update_config
 from config import save_config
 from timm.models import create_model
+import models.SLaK
 
 def str2bool(v):
     """
