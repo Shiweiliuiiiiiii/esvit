@@ -271,7 +271,7 @@ if __name__ == '__main__':
                         type=str)
 
     parser.add_argument('--arch', default='deit_small', type=str,
-        choices=['cvt_tiny', 'swin_tiny','swin_small', 'swin_base', 'swin_large', 'swin', 'vil', 'vil_1281', 'vil_2262', 'deit_tiny', 'deit_small', 'vit_base'] + torchvision_archs,
+        choices=['SLaK_tiny', 'cvt_tiny', 'swin_tiny','swin_small', 'swin_base', 'swin_large', 'swin', 'vil', 'vil_1281', 'vil_2262', 'deit_tiny', 'deit_small', 'vit_base'] + torchvision_archs,
         help="""Name of architecture to train. For quick experiments with ViTs,
         we recommend using deit_tiny or deit_small.""")
 
