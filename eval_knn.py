@@ -41,6 +41,21 @@ from models import build_model
 from config import config
 from config import update_config
 from config import save_config
+from timm.models import create_model
+
+def str2bool(v):
+    """
+    Converts string to bool type; enables command line
+    arguments in the format of '--arg1 true --arg2 false'
+    """
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def extract_feature_pipeline(args):
@@ -101,6 +116,16 @@ def extract_feature_pipeline(args):
     if 'swin' in args.arch :
         update_config(config, args)
         model = build_model(config, is_teacher=True)
+
+    elif 'SLaK' in args.arch:
+        if 'SLaK' in args.arch:
+            update_config(config, args)
+            model = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
+                                   drop_path_rate=args.drop_path_rate,
+                                   layer_scale_init_value=args.layer_scale_init_value,
+                                   head_init_scale=args.head_init_scale, kernel_size=args.kernel_size,
+                                   width_factor=args.width_factor,
+                                   LoRA=args.LoRA, bn=args.bn)
 
     # if the network is a 4-stage vision transformer (i.e. longformer)
     elif 'vil' in args.arch :
@@ -280,6 +305,16 @@ if __name__ == '__main__':
                         help="Modify config options using the command-line",
                         default=None,
                         nargs=argparse.REMAINDER)    
+
+    # SLaK
+    parser.add_argument('--drop_path_rate', type=float, default=0.1, help="stochastic depth rate")
+    parser.add_argument('--nb_classes', default=1000, type=int, help='number of the classification types')
+    parser.add_argument('--layer_scale_init_value', default=1e-6, type=float, help="Layer scale initial values")
+    parser.add_argument('--head_init_scale', default=1.0, type=float, help='classifier head initial scale, typically adjusted in fine-tuning')
+    parser.add_argument('--kernel_size', nargs="*", type=int, default = [7,7,7,7,5], help='kernel size (default: [31,29,27,13,5], the last number is N)')
+    parser.add_argument('--width_factor', type=float, default=1.0, help='set the width factor of the model')
+    parser.add_argument('--LoRA', type=str2bool, default=False, help='Enabling low rank path')
+    parser.add_argument('--bn', type=str2bool, default=False, help='adding bn after large kernels')
 
     args = parser.parse_args()
 
