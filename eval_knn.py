@@ -119,7 +119,7 @@ def extract_feature_pipeline(args):
         model = build_model(config, is_teacher=True)
 
     elif 'SLaK' in args.arch:
-        # update_config(config, args)
+        update_config(config, args)
         model = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
                                drop_path_rate=args.drop_path_rate,
                                layer_scale_init_value=args.layer_scale_init_value,
