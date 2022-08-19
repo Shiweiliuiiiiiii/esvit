@@ -261,6 +261,7 @@ def train_esvit(args):
     # if the network is a 4-stage convnet (ie, convnext, slak)
     if 'SLaK' in args.arch:
         update_config(config, args)
+        print(config)
         student = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
                                drop_path_rate=args.drop_path_rate,
                                layer_scale_init_value=args.layer_scale_init_value,
@@ -301,7 +302,7 @@ def train_esvit(args):
         )
 
     # if the network is a 4-stage vision transformer (i.e. swin)
-    if 'swin' in args.arch :
+    elif 'swin' in args.arch :
         update_config(config, args)
         student = build_model(config, use_dense_prediction=args.use_dense_prediction)
         teacher = build_model(config, is_teacher=True, use_dense_prediction=args.use_dense_prediction)
@@ -323,7 +324,7 @@ def train_esvit(args):
             teacher.head_dense = DINOHead(teacher.num_features, args.out_dim, args.use_bn_in_head)
 
     # if the network is a 4-stage vision transformer (i.e. longformer)
-    if 'vil' in args.arch :
+    elif 'vil' in args.arch :
         update_config(config, args)
         student = build_model(config, use_dense_prediction=args.use_dense_prediction)
         teacher = build_model(config, is_teacher=True, use_dense_prediction=args.use_dense_prediction)
@@ -346,7 +347,7 @@ def train_esvit(args):
 
 
     # if the network is a 4-stage conv vision transformer (i.e. CvT)
-    if 'cvt' in args.arch :
+    elif 'cvt' in args.arch :
         update_config(config, args)
         student = build_model(config, use_dense_prediction=args.use_dense_prediction)
         teacher = build_model(config, is_teacher=True, use_dense_prediction=args.use_dense_prediction)
