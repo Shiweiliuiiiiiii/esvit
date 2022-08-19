@@ -119,14 +119,13 @@ def extract_feature_pipeline(args):
         model = build_model(config, is_teacher=True)
 
     elif 'SLaK' in args.arch:
-        if 'SLaK' in args.arch:
-            update_config(config, args)
-            model = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
-                                   drop_path_rate=args.drop_path_rate,
-                                   layer_scale_init_value=args.layer_scale_init_value,
-                                   head_init_scale=args.head_init_scale, kernel_size=args.kernel_size,
-                                   width_factor=args.width_factor,
-                                   LoRA=args.LoRA, bn=args.bn)
+        # update_config(config, args)
+        model = create_model(args.arch, pretrained=False, num_classes=args.nb_classes,
+                               drop_path_rate=args.drop_path_rate,
+                               layer_scale_init_value=args.layer_scale_init_value,
+                               head_init_scale=args.head_init_scale, kernel_size=args.kernel_size,
+                               width_factor=args.width_factor,
+                               LoRA=args.LoRA, bn=args.bn)
 
     # if the network is a 4-stage vision transformer (i.e. longformer)
     elif 'vil' in args.arch :
