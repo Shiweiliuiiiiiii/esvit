@@ -24,6 +24,4 @@ python -m torch.distributed.launch --nproc_per_node=4 main_esvit.py --arch swin_
 
 
 
-
-
  source deactivate
