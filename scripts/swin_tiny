@@ -8,7 +8,7 @@
 #SBATCH -t 3-11:59:59
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=72
-#SBATCH -o esvit_swin_tiny_7x7_bn.out
+#SBATCH -o esvit_swin_tiny_7x7_bn_resume2.out
 
 source /home/sliu/miniconda3/etc/profile.d/conda.sh
 source activate LoRA
