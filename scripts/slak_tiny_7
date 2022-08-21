@@ -1,23 +1,23 @@
 #!/bin/bash
-#SBATCH --job-name=esvit_slak_7x7_bn_config
+#SBATCH --job-name=esvit_slak_7x7_bn_yaml
 #SBATCH -p gpu
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=4
 #SBATCH --gpus=4
-#SBATCH -t 3-11:59:59
+#SBATCH -t 4-11:59:59
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=72
-#SBATCH -o esvit_slak_7x7_bn_config.out
+#SBATCH -o esvit_slak_7x7_bn_yaml.out
 
 source /home/sliu/miniconda3/etc/profile.d/conda.sh
 source activate LoRA
 
 
-python -m torch.distributed.launch --nproc_per_node=1 main_esvit.py \
+python -m torch.distributed.launch --nproc_per_node=4 main_esvit.py \
 --arch SLaK_tiny --kernel_size 7 7 7 7 100 --bn True  \
 --data_path /projects/2/managed_datasets/imagenet/train/ \
---output_dir ~/project_space/esvit/output/esvit_exp/ssl/slak_tiny_imagenet_7x7_config/ \
+--output_dir ~/project_space/esvit/output/esvit_exp/ssl/slak_tiny_imagenet_7x7_yaml/ \
 --batch_size_per_gpu 64 --epochs 100 --warmup_epochs 10 \
 --use_dense_prediction True \
 --cfg experiments/imagenet/swin/slak_tiny_7x7_224.yaml
