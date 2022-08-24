@@ -11,7 +11,7 @@
 #SBATCH -o esvit_slak_15x15_nobn.out
 
 source /home/sliu/miniconda3/etc/profile.d/conda.sh
-source activate LoRA
+source activate slak
 
 
 python -m torch.distributed.launch --nproc_per_node=4 main_esvit.py \

@@ -11,10 +11,10 @@
 #SBATCH -o esvit_slak_9x9_bn_rep_yaml.out
 
 source /home/sliu/miniconda3/etc/profile.d/conda.sh
-source activate LoRA
+source activate slak
 
 
-python -m torch.distributed.launch --nproc_per_node=4 main_esvit.py \
+python -m torch.distributed.launch --nproc_per_node=1 main_esvit.py \
 --arch SLaK_tiny --kernel_size 9 9 9 9 5 --bn True   \
 --data_path /projects/2/managed_datasets/imagenet/train/ \
 --output_dir ~/project_space/esvit/output/esvit_exp/ssl/slak_tiny_imagenet_9x9_rep_yaml/ \
