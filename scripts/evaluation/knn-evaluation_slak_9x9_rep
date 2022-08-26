@@ -11,7 +11,7 @@
 #SBATCH -o knn_slak_tiny_imagenet_9x9_yaml.out
 
 source /home/sliu/miniconda3/etc/profile.d/conda.sh
-source activate LoRA
+source activate slak
 
 
 
