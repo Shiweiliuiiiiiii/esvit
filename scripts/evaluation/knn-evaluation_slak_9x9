@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=knn_slak_tiny_imagenet_9x9
+#SBATCH --job-name=knn_slak_tiny_imagenet_9x9_yaml
 #SBATCH -p gpu
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=1
@@ -8,7 +8,7 @@
 #SBATCH -t 0-00:59:59
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=18
-#SBATCH -o knn_slak_tiny_imagenet_9x9.out
+#SBATCH -o knn_slak_tiny_imagenet_9x9_yaml.out
 
 source /home/sliu/miniconda3/etc/profile.d/conda.sh
 source activate LoRA
@@ -17,8 +17,8 @@ source activate LoRA
 
 DATA_PATH=/projects/2/managed_datasets/imagenet/
 
-OUT_PATH=~/project_space/esvit/output/esvit_exp/ssl/slak_tiny_imagenet_9x9
-CKPT_PATH=~/project_space/esvit/output/esvit_exp/ssl/slak_tiny_imagenet_9x9/checkpoint.pth
+OUT_PATH=~/project_space/esvit/output/esvit_exp/ssl/slak_tiny_imagenet_9x9_yaml
+CKPT_PATH=~/project_space/esvit/output/esvit_exp/ssl/slak_tiny_imagenet_9x9_yaml/checkpoint.pth
 
 
 # knn
